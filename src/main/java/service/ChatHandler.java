@@ -3,12 +3,12 @@ package service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import entity.SearchResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.lang.reflect.Type;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -98,8 +98,33 @@ public class ChatHandler {
             String json = objectMapper.writeValueAsString(history);
             redisTemplate.opsForValue().set(key, json, Duration.ofDays(7));
             logger.debug("更新对话历史，会话ID: {}, 总消息数: {}", conversationId, history.size());
-        }catch (JsonProcessingException e) {
+        } catch (JsonProcessingException e) {
             logger.error("序列化对话历史错误: {}, 会话ID: {}", e.getMessage(), conversationId, e);
         }
+    }
+
+    /**
+     * 根据搜索结果构建 prompt 上下文
+     * @param searchResults 检索结果
+     * @return 返回上下文
+     */
+    private String buildContext(List<SearchResult> searchResults) {
+        if (searchResults == null || searchResults.isEmpty()) {
+//            返回空字符串，DeepSeekClient 按“无检索结果”逻辑处理
+            return "";
+        }
+//        单段最长长度为300, 超出要截断
+        final int MAX_SNIPPET_LEN = 300;
+        StringBuilder context = new StringBuilder();
+        for (int i = 0; i < searchResults.size(); i++) {
+            SearchResult result = searchResults.get(i);
+            String result_context = result.getTextContent();
+            if (result_context.length() > MAX_SNIPPET_LEN) {
+                result_context = result_context.substring(0, MAX_SNIPPET_LEN) + "...";
+            }
+            String fileName = result.getFileName() != null ? result.getFileName() : "unknown";
+            context.append(String.format("[%d] (%s) %s\n", i + 1, fileName, result_context));
+        }
+        return context.toString();
     }
 }
