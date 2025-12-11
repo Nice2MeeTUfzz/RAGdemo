@@ -69,6 +69,11 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+<!--        WebClient for DeepSeek API-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
+        </dependency>
 <!--        slf4j-->
         <dependency>
             <groupId>org.slf4j</groupId>
